@@ -1,5 +1,5 @@
 import os, glob, zipfile, hashlib, json, platform
-import subprocess
+import asyncio
 from makerfuncs.Options import Options
 
 from makerfuncs.prints import say, error, log
@@ -19,26 +19,54 @@ def _sha1(filename: str):
 	return hash_func.hexdigest()
 
 
-def run(program: list[str], o: Options) -> str:
-	say(' '.join(program), o, '[RUN] ')
-	process = subprocess.Popen(program, universal_newlines=True, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+# https://kevinmccarthy.org/2016/07/25/streaming-subprocess-stdin-and-stdout-with-asyncio-in-python/
+async def readStream(stream, callback) -> None:
+    while True:
+        line = await stream.readline()
+        if line:
+            callback(line)
+        else:
+            break
 
-	out = ''
-	while True:
-		output = process.stdout.readline()
 
-		if output == '' and process.poll() is not None:
-			break;
-		if output:
-			out += output
-			say(output, o, '', '')
-			log(output, o)
+async def streamSubprocess(program, stdoutCallback, stderrCallback) -> int:
+    limit = 2 ** 20 # Up to 1'048'576 chars
+    process = await asyncio.create_subprocess_exec(*program, limit=limit, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
 
-	if process.poll() != 0:
-		error('stderr: ' + process.stderr.read(), o)
-		raise ValueError(program[0] + ' ' + _('returns') + ' ' + str(process.poll()) + ' (0 expected)')
+    await asyncio.wait([
+        asyncio.create_task(readStream(process.stdout, stdoutCallback)),
+        asyncio.create_task(readStream(process.stderr, stderrCallback))
+    ])
 
-	return out
+    return await process.wait()
+
+
+def run(program: list[str], o: Options, checkStderr: bool = False) -> str:
+	say(' '.join(map(lambda x: str(x), program)), o, '[RUN] ')
+
+	stdoutOutput = ''
+	stderrOutput = ''
+
+	def stdoutCallback(data):
+		nonlocal stdoutOutput
+		data = data.decode('utf-8', errors='ignore')
+		stdoutOutput += data
+		say(data, o, '', '')
+		log(data, o)
+
+	def stderrCallback(data):
+		nonlocal stderrOutput
+		data = data.decode('utf-8', errors='ignore')
+		stderrOutput += data
+		say(data, o, '', '')
+		log(data, o)
+
+	returnCode = asyncio.run(streamSubprocess(program, stdoutCallback, stderrCallback))
+	if returnCode != 0 or (checkStderr and len(stderrOutput) > 0):
+		error('stderr: ' + stderrOutput, o)
+		raise RuntimeError(program[0] + ' ' + _('returns') + ' ' + str(returnCode) + ' (0 expected)')
+
+	return stdoutOutput
 
 
 def contours(o: Options) -> None:
