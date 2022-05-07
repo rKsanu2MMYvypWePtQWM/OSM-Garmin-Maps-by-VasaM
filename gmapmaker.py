@@ -13,7 +13,7 @@ def main():
 	o = Options()
 	o.JAVAMEM  = '-Xmx4g' # Maximum amount of available RAM, see https://stackoverflow.com/questions/14763079/what-are-the-xms-and-xmx-parameters-when-starting-jvm
 	o.MAX_JOBS = 4        # Maximum od cores
-	o.VERSION  = 110      # Version
+	o.VERSION  = 111      # Version
 
 
 	try:
