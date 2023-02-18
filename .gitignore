@@ -5,6 +5,7 @@ sea/*
 pbf/*
 maps/*
 polygons/*
+.vscode/*
 
 _pic/*
 _pbf(smazat)/*

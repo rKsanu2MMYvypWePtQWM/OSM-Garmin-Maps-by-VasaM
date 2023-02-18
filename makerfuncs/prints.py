@@ -1,77 +1,54 @@
 import sys
 from datetime import datetime
 from makerfuncs.Lang import _
+from makerfuncs.Options import Options
 
 
-LOG_FILE_NAME = 'gmapmaker.log'
+def _openLogFile(o: Options) -> None:
+    if not hasattr(o, 'logFileHandler') or (hasattr(o, 'logFileHandler') and not o.logFileHandler):
+        try:
+            o.logFileHandler = open(o.logFile, 'w+')
+        except:
+            error(_('Can\'t open file ') + o.logFile, o)
 
 
-def say( msg, o, prefix = '[INFO] ', end = "\n"):
-	if hasattr(o, 'quiet') and not o.quiet:
-		print(prefix, msg, sep='', end = end)
-
-	if hasattr(o, 'logFile'):
-		if o.logFile is True:
-			try:
-				o.logFile = open(LOG_FILE_NAME, "w+")
-			except:
-				error(_("Nelze otevrit soubor ") + LOG_FILE_NAME, o)
-		
-		if o.logFile:
-			o.logFile.write(prefix + msg + end)
-			o.logFile.flush()
+def _closeLogFile(o: Options) -> None:
+    if hasattr(o, 'logFileHandler') and o.logFileHandler and o.logFileHandler.close:
+        o.logFileHandler.close()
 
 
-def log( msg, o ):
-	if hasattr(o, 'logFile'):
-		if o.logFile is True:
-			try:
-				o.logFile = open(LOG_FILE_NAME, "w+")
-			except:
-				error(_("Nelze otevrit soubor ") + LOG_FILE_NAME, o)
-		
-		if o.logFile:
-			o.logFile.write(msg)
-			o.logFile.flush()
+def _writeToLogFile(o: Options, msg: str) -> None:
+    if hasattr(o, 'logFile') and o.logFile is not False:
+        _openLogFile(o)
+
+        o.logFileHandler.write(msg)
+        o.logFileHandler.flush()
 
 
+def say(msg: str, o: Options, prefix: str = '[INFO] ', end: str = '\n') -> None:
+    if hasattr(o, 'quiet') and not o.quiet:
+        print(prefix, msg, sep='', end=end)
 
-def error( msg, o = None ):
-	print( '[ERROR]', msg, file = sys.stderr )
-
-	if o and o.logFile is True:
-		try:
-			o.logFile = open(LOG_FILE_NAME, "w+")
-		except:
-			error(_("Nelze otevrit soubor ") + LOG_FILE_NAME, o)
-	
-	if o and o.logFile:
-		o.logFile.write('[ERROR] ' + msg + '\n' )
-		o.logFile.flush()
+    _writeToLogFile(o, prefix + msg + end)
 
 
+def log(msg: str, o: Options) -> None:
+    _writeToLogFile(o, msg)
 
 
-# def question( msg ):
-# 	while True:
-# 		answer = input( msg + ' [Y/n] ' )
-# 		if answer in ( 'Y', 'y' ):
-# 			return False
-# 		elif answer in ( 'N', 'n' ):
-# 			return True
-# 		else:
-# 			print ( 'Invalid input, try it again...' )
+def error(msg: str, o: Options = None) -> None:
+    print('[ERROR]', msg, file=sys.stderr)
+    _writeToLogFile(o, '[ERROR] ' + msg + '\n')
 
 
-# Ukoncovaci funkce
-def end(o):
-	runtime = 0
-	timeEnd = datetime.now()
-	if hasattr(o, 'timeStart'):
-		runtime = timeEnd - o.timeStart
-	
-	say(_('Ukonceno v ') + str(timeEnd) + ', ' + _('doba behu') + ' ' + str(runtime), o)
-	# print('\007')
+def end(o: Options) -> None:
+    runtime = 0
+    timeEnd = datetime.now()
+    if hasattr(o, 'timeStart'):
+        runtime = timeEnd - o.timeStart
 
-	if hasattr(o, 'logFile') and o.logFile and o.logFile.close:
-		o.logFile.close()
+    say(_('End at ') + str(timeEnd) + ', ' +
+        _('runtime') + ' ' + str(runtime), o)
+    # print('\007')
+
+    _closeLogFile(o)

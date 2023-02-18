@@ -1,11 +1,11 @@
 import textwrap, argparse, re
-from argparse import RawTextHelpFormatter
+from typing import Any
 from makerfuncs import parser
-from makerfuncs.prints import say
 from makerfuncs.Lang import _
+from makerfuncs.Options import Options
 
 
-def _downloadType(data):
+def _downloadType(data: Any) -> str:
 	if str(data).lower() in ('force', 'f'):
 		return '[f]orce'
 	elif str(data).lower() in ('skip', 's'):
@@ -16,14 +16,26 @@ def _downloadType(data):
 		return data
 
 
-def _ageType(data):
+def _ageType(data: Any) -> Any:
 	if re.match(r'^\d+[hdm]$', data):
 		return data
 
 
+def _logFileType(filename: None | str) -> bool | str:
+	if filename is False:
+		return False
 
-# Nactu arumenty
-def parse(o):
+	if filename is None:
+		return 'gmapmaker.log'
+
+	if str(filename).endswith('.log'):
+		return filename
+	else:
+		return str(filename) + '.log'
+
+
+# Load and parse arguments
+def parse(o: Options):
 	argParser = argparse.ArgumentParser(
 		prog = 'gmapmaker',
 		formatter_class = argparse.RawTextHelpFormatter,
@@ -45,7 +57,7 @@ Web: https://github.com/VasaMM/OSM-Garmin-Maps-by-VasaM''')
 	)
 	argParser.add_argument(
 		'--code-page', '-c',
-		choices=['unicode', 'ascii', '1250', '1252', 'latin2'],
+		choices=['unicode', 'ascii', '1250', '1252'],
 		default='1250',
 		help='Kodova stranka ve vygenerovane mape\nCode page in the generated map'
 	)
@@ -60,7 +72,7 @@ Web: https://github.com/VasaMM/OSM-Garmin-Maps-by-VasaM''')
 		type=_downloadType,
 		choices=['[f]orce', '[s]kip', '[a]uto'],
 		default='[a]uto',
-		help='force - Mapova data se pri každem spusteni znovu stahnou | Every time it starts, the data is downloaded again\n\
+		help='force - Mapova data se pri kazdem spusteni znovu stahnou | Every time it starts, the data is downloaded again\n\
 skip - Mapova data se nebudou stahovat | Map data will not be downloaded\n\
 auto - Mapova data se stahnou pouze pokud jsou starsi než --maximum-date-age <vychozi>| Map data will be downloaded only if they is older than --maximum-date-age <default>'
 	)
@@ -108,8 +120,11 @@ Maximum age of map data for automatic download. Value in the form [0-9]+[hdm], w
 	)
 	argParser.add_argument(
 		'--logging', '-l',
-		action='store_true',
-		help='Vytvori logovaci soubor makeMap.log'
+		nargs='?',
+		default=False,
+		action='store',
+		metavar='FILENAME',
+		help='Vytvori logovaci soubor FILENAME.log. Není-li FILENAME zadáno, použije se gmapmaker.log.'
 	)
 	argParser.add_argument(
 		'--version', '-v',
@@ -123,22 +138,18 @@ Maximum age of map data for automatic download. Value in the form [0-9]+[hdm], w
 		help='Prepne skript do anglictiny\nChange language of a script to English'
 	)
 
-
 	args = argParser.parse_args()
 
-
-
 	o.split          = not args.no_split
-	o.area           = args.area
+	o.areaId         = args.area
 	o.downloadMap    = parser.downloadType(args.download)
 	o.maximumDataAge = parser.age(args.maximum_data_age)
 	o.extend         = args.extend
 	o.quiet          = args.quiet
-	o.logFile        = args.logging
+	o.logFile        = _logFileType(args.logging)
 	o.code           = args.code_page
 	o.crop           = args.crop
 	o.mapNumber      = args.map_number
 	o.variant        = args.variant
 	o.en             = args.en
 	o.sufix          = '_VasaM' if args.sufix is None else '_' + args.sufix + '_VasaM'
-
