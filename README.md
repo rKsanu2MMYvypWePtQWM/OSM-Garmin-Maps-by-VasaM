@@ -85,7 +85,7 @@ Dále je nutné připravit polygon a to buď ve formátu *.poly* nebo *.geojson*
 
 
 ### Hotové mapy
-Hotové mapy najdete na stránce [http://www.garmin.vasam.cz](http://www.garmin.vasam.cz)
+Hotové mapy najdete na stránce [https://www.garmin.vasam.cz](https://www.garmin.vasam.cz)
 
 
 **Pozor, tento skript používáte na vlastní riziko a já, jakožto autor nenesu žádnou odpovědnost za škody jim způsobené!**
